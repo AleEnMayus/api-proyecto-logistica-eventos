@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const galleryController = require("../../controllers/galleryController");
+const galleryController = require("../../controllers/GalleryController");
 
 const router = express.Router();
 
