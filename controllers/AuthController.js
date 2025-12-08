@@ -78,13 +78,15 @@ const login = async (req, res) => {
       return res.status(500).json({ message: "Error al generar token de sesión", error: "JWT_ERROR" });
     }
 
-    // En entornos de desarrollo no forzamos secure:true para permitir pruebas en http
+    // En entornos de producción la cookie debe ser `SameSite=None` y `secure:true`
+    // para que el navegador permita enviarla desde un frontend en otro origen.
     const isProd = process.env.NODE_ENV === 'production';
 
     res.cookie('authToken', token, {
       httpOnly: true,
-      secure: isProd, // true en producción (https)
-      sameSite: 'strict',
+      secure: isProd, // debe ser true en producción (https)
+      sameSite: isProd ? 'none' : 'lax', // 'none' en prod para cross-site; 'lax' en dev
+      path: '/',
       maxAge: 2 * 60 * 60 * 1000, // 2 horas
     });
 
@@ -113,7 +115,9 @@ const login = async (req, res) => {
 
 const logout = (req, res) => {
   try {
-    res.clearCookie('authToken');
+    // Limpiar cookie indicando las mismas opciones para asegurar su eliminación
+    const isProd = process.env.NODE_ENV === 'production';
+    res.clearCookie('authToken', { path: '/', sameSite: isProd ? 'none' : 'lax', secure: isProd });
     return res.json({ message: 'Sesión cerrada' });
   } catch (e) {
     console.error('Error en logout:', e);
