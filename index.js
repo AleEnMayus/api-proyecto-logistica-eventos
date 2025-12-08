@@ -23,8 +23,30 @@ const io = init(server);
 notificationSocket(io);
 
 // Middlewares
+// Soporte para uno o varios orígenes definidos en el .env:
+// - FRONTEND_ORIGINS: lista separada por comas (ej: https://app.example.com, http://localhost:5173)
+// - FRONTEND_ORIGIN: valor individual usado como fallback
+const FRONTEND_ORIGINS_ENV = process.env.FRONTEND_ORIGINS;
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
-app.use(cors({ origin: FRONTEND_ORIGIN, credentials: true }));
+const allowedOrigins = FRONTEND_ORIGINS_ENV
+  ? FRONTEND_ORIGINS_ENV.split(',').map((s) => s.trim())
+  : [FRONTEND_ORIGIN];
+
+console.log('-/ CORS allowed origins:', allowedOrigins);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Si no hay origin (requests desde servidor o tools como curl), permitir
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS policy: Origin not allowed'));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
