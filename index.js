@@ -3,6 +3,7 @@ const cors = require("cors");
 const path = require("path");
 const http = require("http");
 const { Server } = require("socket.io");
+const compression = require("compression");
 require("dotenv").config();
 const cookieParser = require('cookie-parser');
 
@@ -47,11 +48,33 @@ app.use(
     credentials: true,
   })
 );
+app.use(compression()); // Compresión gzip/brotli para optimizar transferencia de imágenes
 app.use(express.json());
 app.use(cookieParser());
 
-// Servir carpeta uploads
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Middleware para aplicar headers CORS a archivos estáticos (uploads)
+// Esto asegura que Edge/Bing pueda cargar imágenes desde orígenes diferentes
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (origin && allowedOrigins.includes(origin)) {
+    res.set('Access-Control-Allow-Origin', origin);
+    res.set('Access-Control-Allow-Credentials', 'true');
+  }
+  // Permitir también sin credenciales para solicitudes normales de imágenes
+  res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
+// Servir carpeta uploads con encabezados apropiados
+app.use("/uploads", express.static(path.join(__dirname, "uploads"), {
+  etag: false, // Desactivar ETags para evitar problemas con cache en algunos navegadores
+  setHeaders: (res, path) => {
+    // Establecer CORS headers adicionales explícitamente
+    res.set('Access-Control-Allow-Origin', '*'); // Permite desde cualquier origen
+    res.set('Cache-Control', 'public, max-age=86400'); // Cache 24h
+  }
+}));
 
 // Ruta principal
 app.get("/", (req, res) => {
