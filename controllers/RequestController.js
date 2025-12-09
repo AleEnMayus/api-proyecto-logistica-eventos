@@ -38,75 +38,83 @@ const requestController = {
   },
 
   create: async (req, res) => {
-    try {
-      let { RequestDate, RequestDescription, RequestType, UserId, EventId } = req.body;
+  try {
+    let { RequestDate, RequestDescription, RequestType, UserId, EventId } = req.body;
 
-      const validTypes = ["schedule_appointment", "cancel_event", "document_change"];
-      if (!validTypes.includes(RequestType)) {
-        return res.status(400).json({ error: "Tipo de solicitud inválido" });
-      }
+    const validTypes = ["schedule_appointment", "cancel_event", "document_change"];
+    if (!validTypes.includes(RequestType)) {
+      return res.status(400).json({ error: "Tipo de solicitud inválido" });
+    }
 
-      if (RequestType === "cancel_event" && !EventId) {
-        return res.status(400).json({ error: "EventId es obligatorio para cancelar un evento" });
-      }
+    if (RequestType === "cancel_event" && !EventId) {
+      return res.status(400).json({ error: "EventId es obligatorio para cancelar un evento" });
+    }
 
-      if (RequestDate) {
-        RequestDate = formatDateForMySQL(RequestDate);
-      }
+    if (RequestDate) {
+      RequestDate = formatDateForMySQL(RequestDate);
+    }
 
-      // Intentar crear la solicitud
-      const id = await Request.create({
-        RequestDate,
-        RequestDescription,
-        RequestType,
-        UserId,
-        EventId: EventId || null,
-      });
+    // Intentar crear la solicitud
+    const id = await Request.create({
+      RequestDate,
+      RequestDescription,
+      RequestType,
+      UserId,
+      EventId: EventId || null,
+    });
 
-      // Notificación en tiempo real a todos los administradores
-      io.to("admins").emit("notification:admin", {
-        message: RequestDescription,
-        requestType: RequestType,
-        userId: UserId,
-        requestId: id,
-      });
+    // Notificación en tiempo real a todos los administradores
+    io.to("admins").emit("notification:admin", {
+      message: RequestDescription,
+      requestType: RequestType,
+      userId: UserId,
+      requestId: id,
+    });
 
-      res.status(201).json({ message: "Solicitud creada", RequestId: id });
+    res.status(201).json({ message: "Solicitud creada", RequestId: id });
 
-    } catch (err) {
-      console.error("Error al crear solicitud:", err);
+  } catch (err) {
+    console.error("Error completo al crear solicitud:", {
+      code: err.code,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage,
+      message: err.message,
+      errno: err.errno
+    });
 
-      // Capturar errores específicos del trigger de validación
-      if (err.code === 'ER_SIGNAL_EXCEPTION' || err.sqlState === '45000') {
-        // El trigger lanzó un error personalizado
-        const errorMessage = err.sqlMessage || err.message;
-        
-        return res.status(400).json({ 
-          error: errorMessage,
-          type: 'validation_error'
-        });
-      }
-
-      // Otros errores de MySQL
-      if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-        return res.status(404).json({ 
-          error: "El evento o usuario especificado no existe" 
-        });
-      }
-
-      if (err.code === 'ER_DUP_ENTRY') {
-        return res.status(409).json({ 
-          error: "Ya existe una solicitud similar" 
-        });
-      }
-
-      // Error genérico
-      res.status(500).json({ 
-        error: "Error al crear la solicitud",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    // Capturar errores específicos del trigger de validación
+    if (err.code === 'ER_SIGNAL_EXCEPTION' || err.sqlState === '45000') {
+      // El trigger lanzó un error personalizado
+      const errorMessage = err.sqlMessage || err.message;
+      
+      console.log("Error del trigger detectado:", errorMessage);
+      
+      return res.status(400).json({ 
+        error: errorMessage,
+        type: 'validation_error'
       });
     }
-  },
+
+    // Otros errores de MySQL
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(404).json({ 
+        error: "El evento o usuario especificado no existe" 
+      });
+    }
+
+    if (err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ 
+        error: "Ya existe una solicitud similar" 
+      });
+    }
+
+    // Error genérico
+    res.status(500).json({ 
+      error: "Error al crear la solicitud",
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+  }
+},
 
   updateStatus: async (req, res) => {
     try {
