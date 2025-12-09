@@ -50,10 +50,10 @@ const requestController = {
         return res.status(400).json({ error: "EventId es obligatorio para cancelar un evento" });
       }
 
-      // IMPORTANTE: Para citas, ManagementDate es obligatorio
-      if (RequestType === "schedule_appointment" && !ManagementDate) {
+      // IMPORTANTE: Para citas, RequestDate es obligatorio (fecha solicitada)
+      if (RequestType === "schedule_appointment" && !RequestDate) {
         return res.status(400).json({ 
-          error: "ManagementDate es obligatorio para agendar una cita",
+          error: "RequestDate es obligatorio para agendar una cita",
           message: "Debes proporcionar la fecha y hora deseada para la cita"
         });
       }
@@ -83,13 +83,13 @@ const requestController = {
         requestType: RequestType,
         userId: UserId,
         requestId: id,
-        managementDate: ManagementDate,
+        requestDate: RequestDate,
       });
 
       res.status(201).json({ 
         message: "Solicitud creada exitosamente", 
         RequestId: id,
-        managementDate: ManagementDate
+        requestDate: RequestDate
       });
 
     } catch (err) {
