@@ -54,6 +54,7 @@ const requestController = {
         RequestDate = formatDateForMySQL(RequestDate);
       }
 
+      // Intentar crear la solicitud
       const id = await Request.create({
         RequestDate,
         RequestDescription,
@@ -71,9 +72,39 @@ const requestController = {
       });
 
       res.status(201).json({ message: "Solicitud creada", RequestId: id });
+
     } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Error al crear la solicitud" });
+      console.error("Error al crear solicitud:", err);
+
+      // Capturar errores específicos del trigger de validación
+      if (err.code === 'ER_SIGNAL_EXCEPTION' || err.sqlState === '45000') {
+        // El trigger lanzó un error personalizado
+        const errorMessage = err.sqlMessage || err.message;
+        
+        return res.status(400).json({ 
+          error: errorMessage,
+          type: 'validation_error'
+        });
+      }
+
+      // Otros errores de MySQL
+      if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        return res.status(404).json({ 
+          error: "El evento o usuario especificado no existe" 
+        });
+      }
+
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ 
+          error: "Ya existe una solicitud similar" 
+        });
+      }
+
+      // Error genérico
+      res.status(500).json({ 
+        error: "Error al crear la solicitud",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   },
 
