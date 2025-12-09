@@ -210,21 +210,25 @@ async function updateEvent(req, res) {
       return res.status(404).json({ error: "Evento no encontrado" });
     }
 
-    // Si vienen recursos en el body, reemplazarlos (borrar asignaciones previas e insertar nuevas)
+    // Si vienen recursos en el body, reemplazarlos
     if (Array.isArray(req.body.resources)) {
       try {
         const resources = req.body.resources;
         await EventResources.replaceResourcesForEvent(id, resources);
       } catch (resErr) {
-        console.error('Error actualizando recursos del evento:', resErr);
-        return res.status(500).json({ error: 'Error actualizando recursos del evento' });
+        console.error("Error actualizando recursos del evento:", resErr);
+        return res.status(500).json({
+          error: resErr.sqlMessage || resErr.message || "Error actualizando recursos del evento",
+        });
       }
     }
 
     res.json({ message: "Evento actualizado correctamente" });
   } catch (err) {
     console.error("Error actualizando evento:", err);
-    res.status(500).json({ error: err || "Error actualizando evento" });
+    res.status(500).json({
+      error: err.sqlMessage || err.message || "Error actualizando evento",
+    });
   }
 }
 
