@@ -2,6 +2,11 @@ const path = require("path");
 const fs = require("fs");
 const db = require("../db");
 
+// Helper para obtener la URL base correcta
+const getBaseUrl = () => {
+  return process.env.BASE_URL || `http://localhost:${process.env.PORT || 4000}`;
+};
+
 // ===============================
 // OBTENER FOTO DE PERFIL
 // ===============================
@@ -22,10 +27,10 @@ exports.getProfileImage = async (req, res) => {
       return res.json({ url: photoPath });
     }
 
-    // Construir la URL usando el host real de la petición
-    const host = req.get("host");
+    // Construir la URL usando BASE_URL
+    const baseUrl = getBaseUrl();
     const cleaned = photoPath.replace(/^\/+/, "");
-    const url = `${req.protocol}://${host}/${cleaned}`;
+    const url = `${baseUrl}/${cleaned}`;
 
     return res.json({ url });
   } catch (err) {
@@ -49,9 +54,9 @@ exports.uploadImage = async (req, res) => {
     }
 
     const filePath = file.path.replace(/\\/g, "/");
-    const host = req.get("host");
+    const baseUrl = getBaseUrl();
     const cleanedPath = filePath.replace(/^\/+/, "");
-    const fileUrl = `${req.protocol}://${host}/${cleanedPath}`;
+    const fileUrl = `${baseUrl}/${cleanedPath}`;
 
     // Verificar existencia del usuario
     const [rows] = await db.query("SELECT Photo FROM User WHERE UserId = ?", [UserId]);
@@ -78,7 +83,7 @@ exports.uploadImage = async (req, res) => {
         }
 
         if (prevPath && prevPath.includes("uploads")) {
-          // Resolver la ruta desde el directorio del proyecto (más robusto que path.resolve solo)
+          // Resolver la ruta desde el directorio del proyecto
           const fullPath = path.resolve(__dirname, '..', prevPath);
           if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
         }

@@ -2,6 +2,11 @@ const path = require("path");
 const fs = require("fs");
 const db = require("../db");
 
+// Helper para obtener la URL base correcta
+const getBaseUrl = () => {
+  return process.env.BASE_URL || `http://localhost:${process.env.PORT || 4000}`;
+};
+
 exports.getPaginatedImages = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -25,10 +30,11 @@ exports.getPaginatedImages = async (req, res) => {
       [limit, validOffset]
     );
 
+    const baseUrl = getBaseUrl();
     const formattedImages = images.map((img) => ({
       FileId: img.FileId,
       FileName: img.FileName,
-      url: `${req.protocol}://${req.get("host")}/${img.FilePath.replace(/\\/g, "/")}`,
+      url: `${baseUrl}/${img.FilePath.replace(/\\/g, "/")}`,
       Extension: img.Extension
     }));
 
@@ -80,9 +86,10 @@ exports.getAllImages = async (req, res) => {
       "SELECT FileId, FileName, FilePath, Extension FROM MultimediaFile ORDER BY FileId DESC"
     );
 
+    const baseUrl = getBaseUrl();
     const files = rows.map((r) => ({
       ...r,
-      url: `${req.protocol}://${req.get("host")}/${r.FilePath.replace(/\\/g, "/")}`
+      url: `${baseUrl}/${r.FilePath.replace(/\\/g, "/")}`
     }));
 
     res.json(files);
@@ -134,12 +141,13 @@ exports.getImageById = async (req, res) => {
       "SELECT COUNT(*) AS total FROM MultimediaFile"
     );
 
+    const baseUrl = getBaseUrl();
     res.json({
       FileId: currentImage.FileId,
       FileName: currentImage.FileName,
       FilePath: currentImage.FilePath,
       Extension: currentImage.Extension,
-      url: `${req.protocol}://${req.get("host")}/${currentImage.FilePath.replace(/\\/g, "/")}`,
+      url: `${baseUrl}/${currentImage.FilePath.replace(/\\/g, "/")}`,
       navigation: {
         prevId: prevRows.length ? prevRows[0].FileId : null,
         nextId: nextRows.length ? nextRows[0].FileId : null,
