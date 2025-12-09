@@ -1,12 +1,12 @@
 ---
 
-# 📦 Backend del Proyecto
+# Backend del Proyecto
 
 Este backend está desarrollado con **Node.js**, **Express** y **Socket.IO**, y provee las funcionalidades principales para la gestión de eventos, usuarios, recursos y notificaciones en tiempo real.
 
 ---
 
-## 🚀 Características Principales
+## Características Principales
 
 * **Autenticación y cuentas**: Registro, inicio de sesión, recuperación y cambio de contraseñas.
 * **Gestión de eventos**: Creación, edición, programación y finalización automática de eventos.
@@ -20,7 +20,7 @@ Este backend está desarrollado con **Node.js**, **Express** y **Socket.IO**, y 
 
 ---
 
-## 📂 Estructura del Proyecto
+## Estructura del Proyecto
 
 ```
 backend/
@@ -78,7 +78,7 @@ El backend estará disponible en:
 
 ---
 
-## 🔌 Endpoints Principales
+## Endpoints Principales
 
 * `GET /` → Verificación de estado del servidor
 * `POST /api/auth` → Autenticación de usuarios
@@ -94,7 +94,7 @@ El backend estará disponible en:
 
 ---
 
-## 🛠️ Tecnologías Utilizadas
+## Tecnologías Utilizadas
 
 * **Node.js** + **Express** → Servidor web
 * **MongoDB** → Base de datos
@@ -103,3 +103,36 @@ El backend estará disponible en:
 * **Cors** y **Cookie-Parser** → Seguridad y manejo de sesiones
 
 ---
+
+## ENV
+
+Crea un archivo .env en la raíz del proyecto Backend con las siguientes variables:
+
+- Host de la base de datos
+-Nombre de la base de datos
+- Usuario y contraseña
+- Credenciales del correo electrónico
+- Clave secreta para JWT
+- Puerto del servidor
+- Origen permitido para CORS
+- URL base pública del backend
+
+```bash
+DB_HOST="your-database-host"
+DB_NAME="your-database-name"
+DB_PASSWORD="your-secure-password"
+DB_USER="your-db-user"
+
+EMAIL_USER="your-email@example.com"
+EMAIL_PASS="your-email-app-password"
+
+JWT_SECRET="your-jwt-secret-key"
+
+PORT="4000"
+FRONTEND_ORIGIN="https://happy-art-events-co.vercel.app"
+
+BASE_URL="https://your-production-api-url"
+```
+
+Nota:
+Si usas Railway, Render o similar, coloca estos valores directamente en las variables del panel y mantén fuera del repositorio cualquier dato sensible.
