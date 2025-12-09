@@ -224,7 +224,7 @@ async function updateEvent(req, res) {
     res.json({ message: "Evento actualizado correctamente" });
   } catch (err) {
     console.error("Error actualizando evento:", err);
-    res.status(500).json({ error: "Error actualizando evento" });
+    res.status(500).json({ error: err || "Error actualizando evento" });
   }
 }
 
