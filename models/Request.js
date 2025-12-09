@@ -14,11 +14,18 @@ const Request = {
   },
 
   // Crear una nueva solicitud
-  create: async ({ RequestDate, RequestDescription, RequestType, UserId, EventId }) => {
+  create: async ({ RequestDate, ManagementDate, RequestDescription, RequestType, UserId, EventId }) => {
     const [result] = await db.query(
-      `INSERT INTO Requests (RequestDate, RequestDescription, RequestType, RequestStatus, UserId, EventId) 
-      VALUES (?, ?, ?, 'pending', ?, ?)`,
-      [RequestDate, RequestDescription, RequestType, UserId, EventId || null] // si no envían EventId, será NULL
+      `INSERT INTO Requests (RequestDate, ManagementDate, RequestDescription, RequestType, RequestStatus, UserId, EventId) 
+      VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+      [
+        RequestDate || null, 
+        ManagementDate || null, 
+        RequestDescription, 
+        RequestType, 
+        UserId, 
+        EventId || null
+      ]
     );
     return result.insertId;
   },
@@ -28,6 +35,15 @@ const Request = {
     const [result] = await db.query(
       `UPDATE Requests SET RequestStatus = ? WHERE RequestId = ?`,
       [status, id]
+    );
+    return result.affectedRows;
+  },
+
+  // Actualizar fecha de gestión (ManagementDate)
+  updateManagementDate: async (id, managementDate) => {
+    const [result] = await db.query(
+      `UPDATE Requests SET ManagementDate = ? WHERE RequestId = ?`,
+      [managementDate, id]
     );
     return result.affectedRows;
   },
