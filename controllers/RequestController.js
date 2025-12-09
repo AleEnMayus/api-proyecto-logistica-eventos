@@ -38,83 +38,103 @@ const requestController = {
   },
 
   create: async (req, res) => {
-  try {
-    let { RequestDate, RequestDescription, RequestType, UserId, EventId } = req.body;
+    try {
+      let { RequestDate, ManagementDate, RequestDescription, RequestType, UserId, EventId } = req.body;
 
-    const validTypes = ["schedule_appointment", "cancel_event", "document_change"];
-    if (!validTypes.includes(RequestType)) {
-      return res.status(400).json({ error: "Tipo de solicitud inválido" });
-    }
+      const validTypes = ["schedule_appointment", "cancel_event", "document_change"];
+      if (!validTypes.includes(RequestType)) {
+        return res.status(400).json({ error: "Tipo de solicitud inválido" });
+      }
 
-    if (RequestType === "cancel_event" && !EventId) {
-      return res.status(400).json({ error: "EventId es obligatorio para cancelar un evento" });
-    }
+      if (RequestType === "cancel_event" && !EventId) {
+        return res.status(400).json({ error: "EventId es obligatorio para cancelar un evento" });
+      }
 
-    if (RequestDate) {
-      RequestDate = formatDateForMySQL(RequestDate);
-    }
+      // IMPORTANTE: Para citas, ManagementDate es obligatorio
+      if (RequestType === "schedule_appointment" && !ManagementDate) {
+        return res.status(400).json({ 
+          error: "ManagementDate es obligatorio para agendar una cita",
+          message: "Debes proporcionar la fecha y hora deseada para la cita"
+        });
+      }
 
-    // Intentar crear la solicitud
-    const id = await Request.create({
-      RequestDate,
-      RequestDescription,
-      RequestType,
-      UserId,
-      EventId: EventId || null,
-    });
+      // Formatear fechas si existen
+      if (RequestDate) {
+        RequestDate = formatDateForMySQL(RequestDate);
+      }
 
-    // Notificación en tiempo real a todos los administradores
-    io.to("admins").emit("notification:admin", {
-      message: RequestDescription,
-      requestType: RequestType,
-      userId: UserId,
-      requestId: id,
-    });
+      if (ManagementDate) {
+        ManagementDate = formatDateForMySQL(ManagementDate);
+      }
 
-    res.status(201).json({ message: "Solicitud creada", RequestId: id });
+      // Intentar crear la solicitud (aquí se ejecutará el trigger de validación)
+      const id = await Request.create({
+        RequestDate,
+        ManagementDate,
+        RequestDescription,
+        RequestType,
+        UserId,
+        EventId: EventId || null,
+      });
 
-  } catch (err) {
-    console.error("Error completo al crear solicitud:", {
-      code: err.code,
-      sqlState: err.sqlState,
-      sqlMessage: err.sqlMessage,
-      message: err.message,
-      errno: err.errno
-    });
+      // Notificación en tiempo real a todos los administradores
+      io.to("admins").emit("notification:admin", {
+        message: RequestDescription,
+        requestType: RequestType,
+        userId: UserId,
+        requestId: id,
+        managementDate: ManagementDate,
+      });
 
-    // Capturar errores específicos del trigger de validación
-    if (err.code === 'ER_SIGNAL_EXCEPTION' || err.sqlState === '45000') {
-      // El trigger lanzó un error personalizado
-      const errorMessage = err.sqlMessage || err.message;
-      
-      console.log("Error del trigger detectado:", errorMessage);
-      
-      return res.status(400).json({ 
-        error: errorMessage,
-        type: 'validation_error'
+      res.status(201).json({ 
+        message: "Solicitud creada exitosamente", 
+        RequestId: id,
+        managementDate: ManagementDate
+      });
+
+    } catch (err) {
+      console.error("Error completo al crear solicitud:", {
+        code: err.code,
+        sqlState: err.sqlState,
+        sqlMessage: err.sqlMessage,
+        message: err.message,
+        errno: err.errno
+      });
+
+      // Capturar errores específicos del trigger de validación
+      if (err.code === 'ER_SIGNAL_EXCEPTION' || err.sqlState === '45000') {
+        // El trigger lanzó un error personalizado
+        const errorMessage = err.sqlMessage || err.message;
+        
+        console.log("Error del trigger detectado:", errorMessage);
+        
+        return res.status(400).json({ 
+          error: errorMessage,
+          type: 'validation_error',
+          suggestion: 'Intenta seleccionar otra fecha/hora con al menos 12 horas de diferencia'
+        });
+      }
+
+      // Otros errores de MySQL
+      if (err.code === 'ER_NO_REFERENCED_ROW_2') {
+        return res.status(404).json({ 
+          error: "El evento o usuario especificado no existe" 
+        });
+      }
+
+      if (err.code === 'ER_DUP_ENTRY') {
+        return res.status(409).json({ 
+          error: "Ya existe una solicitud similar" 
+        });
+      }
+
+      // Error genérico
+      res.status(500).json({ 
+        error: "Error al crear la solicitud",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
     }
-
-    // Otros errores de MySQL
-    if (err.code === 'ER_NO_REFERENCED_ROW_2') {
-      return res.status(404).json({ 
-        error: "El evento o usuario especificado no existe" 
-      });
-    }
-
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ 
-        error: "Ya existe una solicitud similar" 
-      });
-    }
-
-    // Error genérico
-    res.status(500).json({ 
-      error: "Error al crear la solicitud",
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
-    });
-  }
-},
+  },
 
   updateStatus: async (req, res) => {
     try {
@@ -133,7 +153,7 @@ const requestController = {
         await Event.updateEvent(request.EventId, { EventStatus: "Canceled" });
       }
 
-      // Notificaciónes al cliente con más datos
+      // Notificaciones al cliente con más datos
       io.to(`user_${request.UserId}`).emit("notification:client", {
         message: `Tu solicitud de tipo "${request.RequestType}" fue ${status}`,
         requestId: req.params.id,
