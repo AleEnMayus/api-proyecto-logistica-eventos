@@ -44,7 +44,7 @@ backend/
 
 ---
 
-## ⚙️ Instalación y Uso
+## Instalación y Uso
 
 1. Clonar el repositorio:
 

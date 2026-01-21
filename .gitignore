@@ -41,3 +41,7 @@ Thumbs.db
 
 # Optional: ignore local npm debug files
 npm-debug.log*
+
+# Notes
+
+NOTES.md
